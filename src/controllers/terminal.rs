@@ -8,7 +8,7 @@ use model::State;
 
 pub struct Terminal {
     terminal: EasyCurses,
-
+    prev_mode: GameMode
 }
 
 //give ourselves a fancy lifetime to swe live as long as any callback
@@ -23,24 +23,39 @@ impl Terminal {
         term.set_cursor_visibility(CursorVisibility::Invisible);
         term.set_echo(false);
 
-        return Terminal {terminal: term}
+        //default to initial mode of GameMode::Quit, to force new render next time we're called
+        return Terminal {terminal: term, prev_mode: GameMode::Quit}
     }
 
-    pub fn get_input(&mut self) -> Option<Message> {
+    pub fn get_input(&mut self, state: &State) -> Option<Message> {
         trace!("Fetching input");
         let input= self.terminal.get_input();
-        self.translate_menu_input(input)
+        match state.mode {
+            GameMode::Menu => {
+                self.translate_menu_input(input)
+            },
+            _ => {
+                None
+            }
+        }
     }
 
 
     pub fn render(&mut self, state: &State, ms_since_frame: &f64) {
-        self.render_ui();
+        let mode_delta = self.prev_mode == state.mode;
+        self.prev_mode = state.mode.clone();
+        if mode_delta {
+            self.clear();
+            self.render_ui();
+        }
         match state.mode {
             GameMode::Menu => {
-                self.build_initial_menu()
+                if mode_delta {
+                    self.build_initial_menu()
+                }
             },
             GameMode::MapEditor => {
-                self.render_map_editor()
+                self.render_map_editor(state)
             },
             _ => ()
         }
@@ -71,7 +86,7 @@ impl Terminal {
                         Some(Message { msg: "Selected Load Game".to_string(), evt: Event::ModeSelected(GameMode::Load)})
                     } else if c == 'm' || c == 'M' {
                         Some(Message {msg: "Selected Map Editor".to_string(), evt: Event::ModeSelected(GameMode::MapEditor)})
-                    } else if c == 'q' || c == 'Q' {
+                    } else if c == 'q' || c == 'Q' || c == 27 as char {
                         Some(Message {msg: "Selected quit".to_string(), evt: Event::ModeSelected(GameMode::Quit)})
                     } else {
                         debug!("Unknown key pressed, returning None: {}", c);
@@ -86,7 +101,7 @@ impl Terminal {
 
     }
 
-    fn render_map_editor(&mut self) {
+    fn render_map_editor(&mut self, state: &State) {
 
     }
 

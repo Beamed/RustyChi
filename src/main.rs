@@ -38,7 +38,7 @@ fn main() {
         let ms_since_frame = lag / target_frame_amt;
         trace!("rendering with ms since: {}", ms_since_frame);
         terminal.render(&state, &ms_since_frame );
-        if let Some(cmd) = terminal.get_input() {
+        if let Some(cmd) = terminal.get_input(&state) {
             cmd_buffer.push(cmd);
         }
     }
